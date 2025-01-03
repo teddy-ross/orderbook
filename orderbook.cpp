@@ -78,7 +78,8 @@ public:
     Quantity GetInitialQuantity() const {return initialQuantity_;}
     Quantity GetRemainingQuantity() const {return remainingQuantity_;}
     Quantity GetFilledQuantity() const {return GetInitialQuantity() - GetRemainingQuantity();}
-
+    bool IsFilled() const {return GetRemainingQuantity() == 0;}
+    
     void Fill(Quantity quantity){
 
         if (quantity > GetRemainingQuantity()){
@@ -152,7 +153,72 @@ private:
 
 using Trades = std::vector<Trade>;
 
+//orderbook class
+class Orderbook{
+private:
 
+    struct OrderEntry{
+        OrderPointer order_{nullptr};
+        OrderPointers::iterator location_;
+
+    };
+
+    std::map<Price, OrderPointers, std::greater<Price>> bids_; //maps to define bids and asks, easy O(1) access based on OrderId
+    std::map<Price, OrderPointers, std::less<Price>> asks_;
+    std::unordered_map<OrderId, OrderEntry> orders_;
+
+    bool CanMatch(Side side, Price price) const{ //checks if we can match our asks or bids with the price
+        if (side == Side::Buy) {
+
+            if (asks_.empty()) {
+            return false;
+        }
+
+        const auto& [bestAsk, _] = *asks_.begin();
+        return price >= bestAsk;
+
+    } else { // Matching for Side::Sell
+        if (bids_.empty()) {
+            return false;
+        }
+
+        const auto& [bestBid, _] = *bids_.begin();
+        return price <= bestBid;
+    }
+}
+
+
+    Trades MatchOrders(){
+        Trades trades;
+
+        trades.reserve(orders_.size());
+
+        while(true){
+            if(bids_.empty() || asks_.empty()){
+                break;
+            }
+            auto& [bidPrice, bids] = *bids_.begin();
+            auto& [askPrice, asks] = *asks_.begin();
+
+            if (bidPrice < askPrice){
+                break;
+            }
+
+            while (bids.size() && asks.size()){ //go ahead and match bids and asks!
+                auto& bid = bids.front(); //best time price priority
+                auto& ask = asks.front();
+
+                Quantity quantity = std::min(bid->GetRemainingQuantity(), ask -> GetRemainingQuantity());
+
+                bid->Fill(quantity);
+                ask->Fill(quantity);
+
+                if(bid)
+            }
+        }
+    }
+
+};
 
 
 int main(){
